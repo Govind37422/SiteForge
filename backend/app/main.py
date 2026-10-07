@@ -1,0 +1,188 @@
+import os
+from pathlib import Path
+from fastapi import FastAPI, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pydantic import BaseModel
+from typing import Optional, List, Dict, Any
+from app.config import PROVIDER, PROVIDER_CONFIGS
+from app.database import (
+    init_db, save_project, add_revision, 
+    get_all_projects, get_project_by_id, delete_project
+)
+from app.generator import SiteForgeGenerator
+
+app = FastAPI(
+    title="SiteForge AI Engine",
+    description="Next-generation AI Website Generator API",
+    version="2.0.0"
+)
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize DB immediately
+init_db()
+
+generator = SiteForgeGenerator()
+
+# Schemas
+class GenerateRequest(BaseModel):
+    prompt: str
+
+class RefineRequest(BaseModel):
+    project_id: int
+    prompt: str
+
+SAMPLE_TEMPLATES = [
+    {
+        "id": "saas-landing",
+        "category": "SaaS & Tech",
+        "title": "QuantumFlow — AI DevOps Platform",
+        "prompt": "An ultra-modern, dark-themed SaaS landing page for an AI cloud optimization engine named QuantumFlow. Includes glowing gradient accents, live metrics counter, animated pipeline architecture cards, interactive pricing tier toggle (Monthly vs Annual), client logos, testimonials, and a high-converting hero CTA."
+    },
+    {
+        "id": "agency-portfolio",
+        "category": "Creative & Design",
+        "title": "Aether Studio — Digital Experience Agency",
+        "prompt": "A luxury design agency website with high-contrast typography, minimalist layout, interactive portfolio grid with hover previews, client testimonials with awards badge, services accordion, and an interactive project inquiry contact section."
+    },
+    {
+        "id": "fintech-app",
+        "category": "Finance & Crypto",
+        "title": "ApexPay — Global Borderless Payments",
+        "prompt": "A sleek fintech landing page showcasing a global payment infrastructure card, animated currency conversion rate calculator, security trust badges, interactive feature cards with glowing borders, FAQ accordion, and dual mobile app download buttons."
+    },
+    {
+        "id": "restaurant-lounge",
+        "category": "Hospitality",
+        "title": "L'Aura — Modern Artisanal Bistro",
+        "prompt": "An elegant, atmospheric restaurant & cocktail lounge website with rich warm tones, interactive food & drink menu tabs (Starters, Mains, Mixology), Chef's story section, customer praise reviews, and a table reservation booking form with time slots."
+    }
+]
+
+@app.get("/api/health")
+def health():
+    return {
+        "status": "online",
+        "service": "SiteForge AI",
+        "provider": PROVIDER,
+        "model": generator.default_model
+    }
+
+@app.get("/api/templates")
+def get_templates():
+    return SAMPLE_TEMPLATES
+
+@app.get("/api/projects")
+def list_projects():
+    return get_all_projects()
+
+@app.get("/api/projects/{project_id}")
+def get_project(project_id: int):
+    project = get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+@app.delete("/api/projects/{project_id}")
+def remove_project(project_id: int):
+    success = delete_project(project_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"message": "Project deleted successfully"}
+
+@app.get("/api/preview/{project_id}")
+def preview_html(project_id: int):
+    project = get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return Response(content=project["full_code"], media_type="text/html")
+
+@app.post("/api/generate")
+def generate_site(req: GenerateRequest):
+    if not req.prompt or len(req.prompt.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Prompt must be at least 5 characters.")
+    
+    try:
+        result = generator.generate(req.prompt.strip())
+        full_code = result.get("html", "")
+        title = result.get("title", "Generated Website")
+        description = result.get("description", "Created with SiteForge AI")
+        
+        project_id = save_project(
+            title=title,
+            prompt=req.prompt.strip(),
+            description=description,
+            html=full_code,
+            css="",
+            js="",
+            full_code=full_code,
+            provider=result.get("provider", PROVIDER),
+            model=result.get("model", generator.default_model)
+        )
+        
+        return {
+            "id": project_id,
+            "title": title,
+            "description": description,
+            "prompt": req.prompt.strip(),
+            "full_code": full_code,
+            "provider": result.get("provider", PROVIDER),
+            "model": result.get("model", generator.default_model)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/refine")
+def refine_site(req: RefineRequest):
+    project = get_project_by_id(req.project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    try:
+        result = generator.refine(project["full_code"], req.prompt.strip())
+        new_code = result.get("html", "")
+        title = result.get("title", project["title"])
+        
+        rev_num = add_revision(
+            project_id=req.project_id,
+            prompt=req.prompt.strip(),
+            full_code=new_code,
+            html=new_code,
+            css="",
+            js=""
+        )
+        
+        return {
+            "id": req.project_id,
+            "revision_number": rev_num,
+            "title": title,
+            "full_code": new_code,
+            "description": result.get("description", "Refined with SiteForge AI")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Mount compiled frontend if available
+FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    def serve_spa(full_path: str):
+        file_path = FRONTEND_DIST / full_path
+        if file_path.is_file():
+            return FileResponse(file_path)
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
