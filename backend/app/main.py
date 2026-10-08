@@ -1,10 +1,19 @@
 import os
+import logging
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+# Setup Production Logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler()]
+)
+logger = logging.getLogger("SiteForgeAPI")
 from typing import Optional, List, Dict, Any
 from app.config import PROVIDER, PROVIDER_CONFIGS
 from app.database import (
@@ -28,6 +37,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
 # Initialize DB immediately
 init_db()
 
@@ -35,11 +52,11 @@ generator = SiteForgeGenerator()
 
 # Schemas
 class GenerateRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(..., min_length=5, max_length=1500, description="The user prompt for generating the site.")
 
 class RefineRequest(BaseModel):
     project_id: int
-    prompt: str
+    prompt: str = Field(..., min_length=2, max_length=1500, description="The modification prompt.")
 
 SAMPLE_TEMPLATES = [
     {
@@ -124,6 +141,7 @@ def generate_site(req: GenerateRequest):
         title = result.get("title", "Generated App")
         description = result.get("description", "Created with SiteForge Universal")
         
+        logger.info(f"Generated project '{title}' with files: {list(files.keys())}")
         project_id = save_project(
             title=title,
             prompt=req.prompt.strip(),
@@ -132,6 +150,7 @@ def generate_site(req: GenerateRequest):
             provider=result.get("provider", PROVIDER),
             model=result.get("model", generator.default_model)
         )
+        logger.info(f"Saved project ID: {project_id}")
         
         return {
             "id": project_id,
@@ -143,7 +162,8 @@ def generate_site(req: GenerateRequest):
             "model": result.get("model", generator.default_model)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+        logger.error(f"Generation failed: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error during generation")
 
 @app.post("/api/refine")
 def refine_site(req: RefineRequest):

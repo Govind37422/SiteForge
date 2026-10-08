@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  siteforge:
+    build: .
+    container_name: siteforge_production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/data:/app/backend/data
+      - ./.env:/app/backend/.env
+    environment:
+      - PROVIDER=openrouter
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
