@@ -43,28 +43,28 @@ class RefineRequest(BaseModel):
 
 SAMPLE_TEMPLATES = [
     {
+        "id": "mobile-fitness",
+        "category": "Mobile App",
+        "title": "FitPulse — Mobile Fitness & Workout Tracker",
+        "prompt": "A modern mobile app PWA for fitness tracking with workout streak counters, daily goals, activity list, and native bottom navigation bar."
+    },
+    {
+        "id": "fintech-wallet",
+        "category": "Mobile App",
+        "title": "VaultX — Secure Crypto Mobile Wallet",
+        "prompt": "A sleek mobile fintech wallet app with balance overview, quick send/receive action buttons, recent crypto transactions, and bottom app bar."
+    },
+    {
         "id": "saas-landing",
-        "category": "SaaS & Tech",
+        "category": "Website & SaaS",
         "title": "QuantumFlow — AI DevOps Platform",
-        "prompt": "An ultra-modern, dark-themed SaaS landing page for an AI cloud optimization engine named QuantumFlow. Includes glowing gradient accents, live metrics counter, animated pipeline architecture cards, interactive pricing tier toggle (Monthly vs Annual), client logos, testimonials, and a high-converting hero CTA."
+        "prompt": "An ultra-modern, dark-themed SaaS landing page for an AI cloud optimization engine named QuantumFlow with glowing gradient accents, live metrics, and pricing tiers."
     },
     {
         "id": "agency-portfolio",
-        "category": "Creative & Design",
+        "category": "Website & Creative",
         "title": "Aether Studio — Digital Experience Agency",
-        "prompt": "A luxury design agency website with high-contrast typography, minimalist layout, interactive portfolio grid with hover previews, client testimonials with awards badge, services accordion, and an interactive project inquiry contact section."
-    },
-    {
-        "id": "fintech-app",
-        "category": "Finance & Crypto",
-        "title": "ApexPay — Global Borderless Payments",
-        "prompt": "A sleek fintech landing page showcasing a global payment infrastructure card, animated currency conversion rate calculator, security trust badges, interactive feature cards with glowing borders, FAQ accordion, and dual mobile app download buttons."
-    },
-    {
-        "id": "restaurant-lounge",
-        "category": "Hospitality",
-        "title": "L'Aura — Modern Artisanal Bistro",
-        "prompt": "An elegant, atmospheric restaurant & cocktail lounge website with rich warm tones, interactive food & drink menu tabs (Starters, Mains, Mixology), Chef's story section, customer praise reviews, and a table reservation booking form with time slots."
+        "prompt": "A luxury design agency website with high-contrast typography, minimalist layout, portfolio grid, and contact section."
     }
 ]
 
