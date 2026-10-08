@@ -73,84 +73,125 @@ def generate_universal_fallback(prompt: str) -> dict:
 
   <!-- App Main Content Area -->
   <main class="flex-1 p-4 max-w-md mx-auto w-full space-y-4 overflow-y-auto pb-24">
-    <!-- Welcome Banner Card -->
-    <div class="p-5 rounded-2xl bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent border border-indigo-500/30 relative overflow-hidden">
-      <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
-      <span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-full">Live Session</span>
-      <h2 class="text-xl font-extrabold text-white mt-2">Welcome back, Creator!</h2>
-      <p class="text-xs text-slate-400 mt-1">Your app is synced and fully operational with FastAPI backend.</p>
-      <button onclick="alert('Action triggered successfully!')" class="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition">
-        <i class="fa-solid fa-plus mr-1"></i> Quick Action
-      </button>
+    
+    <!-- HOME VIEW -->
+    <div id="view-home" class="app-view space-y-4">
+      <!-- Welcome Banner Card -->
+      <div class="p-5 rounded-2xl bg-gradient-to-br from-indigo-600/20 via-purple-600/10 to-transparent border border-indigo-500/30 relative overflow-hidden">
+        <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl"></div>
+        <span class="text-[10px] font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-500/20 px-2 py-0.5 rounded-full">Live Session</span>
+        <h2 class="text-xl font-extrabold text-white mt-2">Welcome back, Creator!</h2>
+        <p class="text-xs text-slate-400 mt-1">Your app is synced and fully operational with FastAPI backend.</p>
+        <button onclick="handleQuickAction()" class="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition">
+          <i class="fa-solid fa-plus mr-1"></i> Quick Action
+        </button>
+      </div>
+
+      {f'''<!-- Interactive Stats Grid -->
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-4 rounded-2xl bg-[#12141c] border border-white/10">
+          <div class="text-slate-400 text-[11px] font-medium">Daily Streak</div>
+          <div id="streak-count" class="text-2xl font-bold text-white mt-1">12 Days 🔥</div>
+          <div class="text-emerald-400 text-[10px] mt-1">+2 days vs last week</div>
+        </div>
+        <div class="p-4 rounded-2xl bg-[#12141c] border border-white/10">
+          <div class="text-slate-400 text-[11px] font-medium">Completion</div>
+          <div class="text-2xl font-bold text-white mt-1">88% 🚀</div>
+          <div class="text-indigo-400 text-[10px] mt-1">Target: 90%</div>
+        </div>
+      </div>''' if 'Mobile' in app_type else ''}
+
+      <!-- Recent Activity / Items List -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
+          <span>Recent Activity</span>
+          <span class="text-indigo-400 cursor-pointer" onclick="showToast('Viewing all')">View All</span>
+        </div>
+        
+        <div class="p-3.5 rounded-xl bg-[#12141c] border border-white/10 flex items-center justify-between hover:border-indigo-500/40 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+              <i class="fa-solid fa-check text-xs"></i>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-white">Cloud Sync Completed</div>
+              <div class="text-[10px] text-slate-400">Just now • 2.4 MB</div>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold">Success</span>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-[#12141c] border border-white/10 flex items-center justify-between hover:border-indigo-500/40 transition">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+              <i class="fa-solid fa-sync text-xs animate-spin"></i>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-white">AI Model Fine-Tuning</div>
+              <div class="text-[10px] text-slate-400">In progress • 74%</div>
+            </div>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-semibold">Running</span>
+        </div>
+      </div>
     </div>
 
-    {f'''<!-- Interactive Stats Grid -->
-    <div class="grid grid-cols-2 gap-3">
-      <div class="p-4 rounded-2xl bg-[#12141c] border border-white/10">
-        <div class="text-slate-400 text-[11px] font-medium">Daily Streak</div>
-        <div class="text-2xl font-bold text-white mt-1">12 Days 🔥</div>
-        <div class="text-emerald-400 text-[10px] mt-1">+2 days vs last week</div>
+    <!-- ANALYTICS VIEW -->
+    <div id="view-stats" class="app-view hidden space-y-4">
+      <h2 class="text-xl font-bold text-white px-2">Analytics</h2>
+      <div class="h-40 rounded-2xl bg-[#12141c] border border-white/10 flex items-end p-4 gap-2 justify-between">
+        <div class="w-full bg-indigo-500 rounded-t-sm h-[40%]"></div>
+        <div class="w-full bg-purple-500 rounded-t-sm h-[70%]"></div>
+        <div class="w-full bg-indigo-500 rounded-t-sm h-[30%]"></div>
+        <div class="w-full bg-purple-500 rounded-t-sm h-[90%]"></div>
+        <div class="w-full bg-indigo-500 rounded-t-sm h-[50%]"></div>
+        <div class="w-full bg-indigo-400 rounded-t-sm h-[80%]"></div>
       </div>
-      <div class="p-4 rounded-2xl bg-[#12141c] border border-white/10">
-        <div class="text-slate-400 text-[11px] font-medium">Completion</div>
-        <div class="text-2xl font-bold text-white mt-1">88% 🚀</div>
-        <div class="text-indigo-400 text-[10px] mt-1">Target: 90%</div>
-      </div>
-    </div>''' if 'Mobile' in app_type else ''}
+      <p class="text-xs text-slate-400 px-2 text-center">Engagement is up by 34% this week.</p>
+    </div>
 
-    <!-- Recent Activity / Items List -->
-    <div class="space-y-2">
-      <div class="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
-        <span>Recent Activity</span>
-        <span class="text-indigo-400 cursor-pointer" onclick="alert('Viewing all')">View All</span>
+    <!-- ALERTS VIEW -->
+    <div id="view-alerts" class="app-view hidden space-y-4">
+      <h2 class="text-xl font-bold text-white px-2">Notifications</h2>
+      <div class="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+        <div class="text-sm font-semibold text-amber-400 mb-1">Security Alert</div>
+        <div class="text-xs text-amber-200/70">New login detected from an unrecognized device in Paris, France.</div>
       </div>
-      
-      <div class="p-3.5 rounded-xl bg-[#12141c] border border-white/10 flex items-center justify-between hover:border-indigo-500/40 transition">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-            <i class="fa-solid fa-check text-xs"></i>
-          </div>
-          <div>
-            <div class="text-xs font-semibold text-white">Cloud Sync Completed</div>
-            <div class="text-[10px] text-slate-400">Just now • 2.4 MB</div>
-          </div>
-        </div>
-        <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold">Success</span>
+      <div class="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+        <div class="text-sm font-semibold text-emerald-400 mb-1">System Updated!</div>
+        <div class="text-xs text-emerald-200/70">SiteForge components have been successfully upgraded to v3.0.</div>
       </div>
+    </div>
 
-      <div class="p-3.5 rounded-xl bg-[#12141c] border border-white/10 flex items-center justify-between hover:border-indigo-500/40 transition">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
-            <i class="fa-solid fa-sync text-xs animate-spin"></i>
-          </div>
-          <div>
-            <div class="text-xs font-semibold text-white">AI Model Fine-Tuning</div>
-            <div class="text-[10px] text-slate-400">In progress • 74%</div>
-          </div>
-        </div>
-        <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 font-semibold">Running</span>
+    <!-- PROFILE VIEW -->
+    <div id="view-profile" class="app-view hidden space-y-4">
+      <div class="flex flex-col items-center justify-center p-6 rounded-2xl bg-[#12141c] border border-white/10">
+        <div class="w-20 h-20 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 border-4 border-[#090a0f] text-3xl flex items-center justify-center -mt-12 mb-3 shadow-lg">👨‍💻</div>
+        <h2 class="text-lg font-bold text-white">Creator</h2>
+        <p class="text-xs text-indigo-400">Pro Member</p>
+        <button onclick="showToast('Settings opened')" class="mt-4 px-6 py-2 rounded-full border border-white/20 text-white text-xs font-semibold hover:bg-white/10 transition">Edit Profile</button>
       </div>
     </div>
   </main>
 
   <!-- Native App Bottom Navigation Bar -->
   <nav class="fixed bottom-0 left-0 right-0 bg-[#12141c]/95 backdrop-blur-lg border-t border-white/10 px-6 py-3 flex items-center justify-around z-50 max-w-md mx-auto">
-    <button onclick="setActiveTab('home')" class="flex flex-col items-center gap-1 text-indigo-400">
+    <button id="nav-home" onclick="setActiveTab('home')" class="flex flex-col items-center gap-1 text-indigo-400">
       <i class="fa-solid fa-house text-base"></i>
       <span class="text-[10px] font-semibold">Home</span>
     </button>
-    <button onclick="setActiveTab('stats')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+    <button id="nav-stats" onclick="setActiveTab('stats')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
       <i class="fa-solid fa-chart-pie text-base"></i>
       <span class="text-[10px] font-semibold">Analytics</span>
     </button>
-    <button onclick="setActiveTab('add')" class="w-12 h-12 -mt-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/40 hover:scale-105 transition">
+    <button onclick="handleQuickAction()" class="w-12 h-12 -mt-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-indigo-500/40 hover:scale-105 transition">
       <i class="fa-solid fa-plus text-base"></i>
     </button>
-    <button onclick="setActiveTab('notifications')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+    <button id="nav-alerts" onclick="setActiveTab('alerts')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
       <i class="fa-regular fa-bell text-base"></i>
       <span class="text-[10px] font-semibold">Alerts</span>
     </button>
-    <button onclick="setActiveTab('profile')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
+    <button id="nav-profile" onclick="setActiveTab('profile')" class="flex flex-col items-center gap-1 text-slate-400 hover:text-white">
       <i class="fa-regular fa-user text-base"></i>
       <span class="text-[10px] font-semibold">Profile</span>
     </button>
@@ -164,6 +205,11 @@ def generate_universal_fallback(prompt: str) -> dict:
 
     function setActiveTab(tab) {{
       currentTab = tab;
+      
+      // Update DOM Views
+      document.querySelectorAll('.app-view').forEach(view => view.classList.add('hidden'));
+      const activeView = document.getElementById('view-' + tab);
+      if(activeView) activeView.classList.remove('hidden');
       
       // Reset all nav icons
       document.querySelectorAll('nav button').forEach(btn => {{
