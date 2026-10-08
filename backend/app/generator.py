@@ -3,15 +3,19 @@ import re
 from openai import OpenAI
 from app.config import PROVIDER, API_KEY, PROVIDER_CONFIGS
 
-EMERGENT_SYSTEM_PROMPT = """You are SiteForge Universal App & Website Synthesizer.
-Your objective is to generate a complete multi-file application or website based on the user's prompt.
-If the prompt asks for a mobile app, PWA, or application, design it with a mobile app layout (bottom navigation bar, native header, touch-friendly cards, app state).
-If it asks for a website/landing page, design a high-end responsive landing page.
+EMERGENT_SYSTEM_PROMPT = """You are SiteForge Universal App & Website Synthesizer, an elite autonomous AI developer.
+Your objective is to generate a fully functional, production-ready multi-file application based on the user's prompt.
 
-Return a strictly valid JSON object with a 'files' dictionary:
+Crucial Technical Requirements:
+1. FRONTEND: If building a React app (src/App.jsx), use React hooks (useState, useEffect), implement interactive local state, simulate API calls, and use Tailwind CSS for gorgeous styling.
+2. BACKEND API: If building a backend (backend/main.py), use FastAPI to create real endpoints (CRUD routes) that the frontend can theoretically communicate with.
+3. LANDING PAGE / PWA: If generating a raw HTML/JS app (index.html), include embedded JavaScript (Vanilla or Alpine) for real interactions (tabs switching, counter states, modal popups) rather than empty alerts. Include floating action buttons and bottom navigation bars for mobile PWAs.
+4. STYLING: Always use Tailwind CSS via CDN. Ensure styling is ultra-modern, fully responsive (desktop, tablet, mobile), and features sleek dark mode or vibrant glassmorphic gradients.
+
+Return a strictly valid JSON object exactly like this:
 {
-  "title": "App/Website Title",
-  "description": "Short description",
+  "title": "AppName - Short Catchphrase",
+  "description": "Brief description of the app limits.",
   "files": {
     "index.html": "<!DOCTYPE html>...",
     "src/App.jsx": "...",
@@ -153,8 +157,48 @@ def generate_universal_fallback(prompt: str) -> dict:
   </nav>
 
   <script>
+    // App State
+    let currentTab = 'home';
+    const streakEl = document.getElementById('streak-count');
+    let clicks = 0;
+
     function setActiveTab(tab) {{
-      alert('Switched to tab: ' + tab);
+      currentTab = tab;
+      
+      // Reset all nav icons
+      document.querySelectorAll('nav button').forEach(btn => {{
+        btn.classList.remove('text-indigo-400');
+        btn.classList.add('text-slate-400');
+      }});
+      
+      // Active the clicked one
+      const clickedBtn = document.getElementById('nav-' + tab);
+      if(clickedBtn) {{
+        clickedBtn.classList.remove('text-slate-400');
+        clickedBtn.classList.add('text-indigo-400');
+      }}
+
+      // Show toast
+      showToast('Navigated to ' + tab.charAt(0).toUpperCase() + tab.slice(1));
+    }}
+
+    function handleQuickAction() {{
+      clicks++;
+      if (streakEl) streakEl.innerText = (12 + clicks) + ' Days 🔥';
+      showToast('Action logged successfully!');
+    }}
+
+    function showToast(message) {{
+      const toast = document.createElement('div');
+      toast.className = 'fixed top-16 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all opacity-0 flex items-center z-[100]';
+      toast.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> ${{message}}`;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.classList.replace('opacity-0', 'opacity-100'), 10);
+      setTimeout(() => {{
+        toast.classList.replace('opacity-100', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }}, 2500);
     }}
   </script>
 </body>
