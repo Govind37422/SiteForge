@@ -6,14 +6,17 @@ export default function PreviewViewport({ project, onOpenInNewTab }) {
   const [copied, setCopied] = useState(false);
   const iframeRef = useRef(null);
 
+  const files = project.files || { "index.html": project.full_code || "" };
+  const htmlContent = files["index.html"] || "<h1>No HTML found</h1>";
+
   const handleRefresh = () => {
     if (iframeRef.current) {
-      iframeRef.current.srcdoc = project.full_code;
+      iframeRef.current.srcdoc = htmlContent;
     }
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(project.full_code);
+    navigator.clipboard.writeText(htmlContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -63,7 +66,7 @@ export default function PreviewViewport({ project, onOpenInNewTab }) {
         <div className="hidden sm:flex items-center gap-2 text-xs text-slate-300">
           <span className="font-semibold text-white truncate max-w-xs">{project.title}</span>
           <span className="text-slate-600">•</span>
-          <span className="text-slate-400 text-[11px]">Interactive Preview</span>
+          <span className="text-slate-400 text-[11px]">Emergent Full-Stack Preview</span>
         </div>
 
         {/* Quick controls */}
@@ -71,10 +74,10 @@ export default function PreviewViewport({ project, onOpenInNewTab }) {
           <button
             onClick={handleCopy}
             className="flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition"
-            title="Copy HTML to clipboard"
+            title="Copy index.html to clipboard"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span className="hidden md:inline">{copied ? 'Copied!' : 'Copy Code'}</span>
+            <span className="hidden md:inline">{copied ? 'Copied!' : 'Copy HTML'}</span>
           </button>
           <button
             onClick={handleRefresh}
@@ -104,7 +107,7 @@ export default function PreviewViewport({ project, onOpenInNewTab }) {
         >
           <iframe
             ref={iframeRef}
-            srcDoc={project.full_code}
+            srcDoc={htmlContent}
             title={project.title}
             className="w-full h-full bg-white rounded-lg"
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"

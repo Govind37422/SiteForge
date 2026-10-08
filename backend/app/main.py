@@ -104,7 +104,9 @@ def preview_html(project_id: int):
     project = get_project_by_id(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    return Response(content=project["full_code"], media_type="text/html")
+    files = project.get("files", {})
+    html_content = files.get("index.html", "<h1>No HTML file found</h1>")
+    return Response(content=html_content, media_type="text/html")
 
 @app.post("/api/generate")
 def generate_site(req: GenerateRequest):
@@ -113,18 +115,15 @@ def generate_site(req: GenerateRequest):
     
     try:
         result = generator.generate(req.prompt.strip())
-        full_code = result.get("html", "")
-        title = result.get("title", "Generated Website")
-        description = result.get("description", "Created with SiteForge AI")
+        files = result.get("files", {})
+        title = result.get("title", "Generated App")
+        description = result.get("description", "Created with SiteForge Emergent")
         
         project_id = save_project(
             title=title,
             prompt=req.prompt.strip(),
             description=description,
-            html=full_code,
-            css="",
-            js="",
-            full_code=full_code,
+            files=files,
             provider=result.get("provider", PROVIDER),
             model=result.get("model", generator.default_model)
         )
@@ -134,7 +133,7 @@ def generate_site(req: GenerateRequest):
             "title": title,
             "description": description,
             "prompt": req.prompt.strip(),
-            "full_code": full_code,
+            "files": files,
             "provider": result.get("provider", PROVIDER),
             "model": result.get("model", generator.default_model)
         }
@@ -148,25 +147,22 @@ def refine_site(req: RefineRequest):
         raise HTTPException(status_code=404, detail="Project not found")
         
     try:
-        result = generator.refine(project["full_code"], req.prompt.strip())
-        new_code = result.get("html", "")
+        result = generator.refine(project["files"], req.prompt.strip())
+        files = result.get("files", project["files"])
         title = result.get("title", project["title"])
         
         rev_num = add_revision(
             project_id=req.project_id,
             prompt=req.prompt.strip(),
-            full_code=new_code,
-            html=new_code,
-            css="",
-            js=""
+            files=files
         )
         
         return {
             "id": req.project_id,
             "revision_number": rev_num,
             "title": title,
-            "full_code": new_code,
-            "description": result.get("description", "Refined with SiteForge AI")
+            "files": files,
+            "description": result.get("description", "Refined with SiteForge")
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
