@@ -18,7 +18,8 @@ def init_db():
         title TEXT NOT NULL,
         prompt TEXT NOT NULL,
         description TEXT,
-        files TEXT NOT NULL, -- JSON dict of filename -> code content
+        files TEXT NOT NULL,
+        full_code TEXT,
         provider TEXT,
         model TEXT,
         created_at TEXT NOT NULL,
@@ -30,7 +31,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         project_id INTEGER NOT NULL,
         prompt TEXT NOT NULL,
-        files TEXT NOT NULL, -- JSON dict of filename -> code content
+        files TEXT NOT NULL,
         revision_number INTEGER NOT NULL,
         created_at TEXT NOT NULL,
         FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
@@ -41,13 +42,14 @@ def init_db():
 
 def save_project(title: str, prompt: str, description: str, files: dict, provider: str, model: str) -> int:
     files_json = json.dumps(files)
+    html_fallback = files.get("index.html", "")
     now = datetime.utcnow().isoformat()
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO projects (title, prompt, description, files, provider, model, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (title, prompt, description, files_json, provider, model, now, now))
+    INSERT INTO projects (title, prompt, description, files, full_code, provider, model, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (title, prompt, description, files_json, html_fallback, provider, model, now, now))
     project_id = cursor.lastrowid
     
     cursor.execute("""
@@ -104,8 +106,20 @@ def get_project_by_id(project_id: int) -> Optional[Dict[str, Any]]:
         conn.close()
         return None
     project = dict(row)
-    project["files"] = json.loads(project["files"])
     
+    try:
+        if project.get("files"):
+            project["files"] = json.loads(project["files"])
+        else:
+            fc = project.get("full_code") or "<h1>No code found</h1>"
+            project["files"] = {"index.html": fc}
+    except Exception:
+        fc = project.get("full_code") or "<h1>No code found</h1>"
+        project["files"] = {"index.html": fc}
+        
+    if "index.html" not in project["files"] and project.get("full_code"):
+        project["files"]["index.html"] = project["full_code"]
+
     cursor.execute("""
     SELECT id, prompt, revision_number, created_at 
     FROM revisions WHERE project_id = ? ORDER BY revision_number ASC

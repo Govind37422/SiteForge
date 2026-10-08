@@ -8,8 +8,9 @@ export default function PreviewViewport({ project, onOpenInNewTab }) {
   const [copied, setCopied] = useState(false);
   const iframeRef = useRef(null);
 
-  const files = project.files || { "index.html": project.full_code || "" };
-  const htmlContent = files["index.html"] || "<h1>No HTML found</h1>";
+  const files = project.files || {};
+  const firstKey = Object.keys(files)[0];
+  const htmlContent = files["index.html"] || (firstKey ? files[firstKey] : null) || project.full_code || `<!DOCTYPE html><html><body style="background:#090a0f;color:white;font-family:sans-serif;padding:40px;"><h2>${project.title || 'App Preview'}</h2><p>${project.description || ''}</p></body></html>`;
 
   const handleRefresh = () => {
     if (iframeRef.current) {

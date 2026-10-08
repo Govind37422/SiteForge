@@ -15,8 +15,8 @@ from app.generator import SiteForgeGenerator
 
 app = FastAPI(
     title="SiteForge AI Engine",
-    description="Next-generation AI Website Generator API",
-    version="2.0.0"
+    description="Next-generation AI Website & App Generator",
+    version="3.0.0"
 )
 
 # CORS Middleware
@@ -105,7 +105,12 @@ def preview_html(project_id: int):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     files = project.get("files", {})
-    html_content = files.get("index.html", "<h1>No HTML file found</h1>")
+    html_content = files.get("index.html")
+    if not html_content and files:
+        first_key = list(files.keys())[0]
+        html_content = files[first_key]
+    if not html_content:
+        html_content = project.get("full_code", "<h1>No HTML found</h1>")
     return Response(content=html_content, media_type="text/html")
 
 @app.post("/api/generate")
@@ -117,7 +122,7 @@ def generate_site(req: GenerateRequest):
         result = generator.generate(req.prompt.strip())
         files = result.get("files", {})
         title = result.get("title", "Generated App")
-        description = result.get("description", "Created with SiteForge Emergent")
+        description = result.get("description", "Created with SiteForge Universal")
         
         project_id = save_project(
             title=title,
