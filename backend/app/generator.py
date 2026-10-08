@@ -285,10 +285,28 @@ class SiteForgeGenerator:
             return generate_universal_fallback("Mobile App")
 
     def generate(self, prompt: str) -> dict:
-        if self.api_key and len(self.api_key) > 5:
+        if not self.api_key or len(self.api_key) < 5:
+            return generate_universal_fallback(prompt)
+            
+        models_to_try = [self.default_model]
+        # Add automatic fallback models over OpenRouter if available
+        if "openrouter" in self.base_url:
+            models_to_try.extend([
+                "google/gemini-pro-1.5",
+                "openai/gpt-4o-mini",
+                "meta-llama/llama-3.1-8b-instruct",
+                "mistralai/mistral-nemo"
+            ])
+        elif "groq" in self.base_url:
+            models_to_try.extend([
+                "llama-3.1-8b-instant",
+                "mixtral-8x7b-32768"
+            ])
+            
+        for model_name in models_to_try:
             try:
                 response = self.client.chat.completions.create(
-                    model=self.default_model,
+                    model=model_name,
                     messages=[
                         {"role": "system", "content": EMERGENT_SYSTEM_PROMPT},
                         {"role": "user", "content": f"Create a mobile app or web app for: {prompt}"}
@@ -299,19 +317,51 @@ class SiteForgeGenerator:
                 content = response.choices[0].message.content or ""
                 data = self._clean_json_response(content)
                 if "files" in data:
-                    data["model"] = self.default_model
+                    data["model"] = model_name
                     data["provider"] = self.provider
                     return data
-            except Exception:
-                pass
+            except Exception as e:
+                print(f"Model {model_name} failed: {e}")
+                continue
 
         return generate_universal_fallback(prompt)
 
     def refine(self, current_files: dict, refinement_prompt: str) -> dict:
+        if not self.api_key or len(self.api_key) < 5:
+            return generate_universal_fallback(refinement_prompt)
+
+        models_to_try = [self.default_model]
+        if "openrouter" in self.base_url:
+            models_to_try.extend(["google/gemini-pro-1.5", "openai/gpt-4o-mini", "meta-llama/llama-3.1-8b-instruct"])
+        elif "groq" in self.base_url:
+            models_to_try.extend(["llama-3.1-8b-instant", "mixtral-8x7b-32768"])
+
+        for model_name in models_to_try:
+            try:
+                prompt_text = f"Here are the current files:\n{json.dumps(current_files)}\n\nUser request: {refinement_prompt}\nApply the changes and return the full updated files in the exact same strictly valid JSON format."
+                response = self.client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": EMERGENT_SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt_text}
+                    ],
+                    temperature=0.7,
+                    max_tokens=6000
+                )
+                content = response.choices[0].message.content or ""
+                data = self._clean_json_response(content)
+                if "files" in data:
+                    data["model"] = model_name
+                    data["provider"] = self.provider
+                    return data
+            except Exception as e:
+                print(f"Refine Model {model_name} failed: {e}")
+                continue
+
         return {
             "title": "Refined App",
             "description": f"Applied changes: {refinement_prompt[:80]}",
             "files": current_files,
-            "model": "SiteForge Universal Synthesizer",
+            "model": "Fallback",
             "provider": "local"
         }
