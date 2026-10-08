@@ -2,6 +2,7 @@ import json
 import re
 from openai import OpenAI
 from app.config import PROVIDER, API_KEY, PROVIDER_CONFIGS
+from app.hardener import harden_html
 
 EMERGENT_SYSTEM_PROMPT = """You are SiteForge Universal App & Website Synthesizer, an elite autonomous AI developer.
 Your objective is to generate a fully functional, production-ready multi-file application based on the user's prompt.

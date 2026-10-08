@@ -21,6 +21,7 @@ from app.database import (
     get_all_projects, get_project_by_id, delete_project
 )
 from app.generator import SiteForgeGenerator
+from app.hardener import harden_html, harden_files
 
 app = FastAPI(
     title="SiteForge AI Engine",
@@ -128,6 +129,8 @@ def preview_html(project_id: int):
         html_content = files[first_key]
     if not html_content:
         html_content = project.get("full_code", "<h1>No HTML found</h1>")
+    # Safety net: guarantee bottom-nav tabs actually work in every preview
+    html_content = harden_html(html_content)
     return Response(content=html_content, media_type="text/html")
 
 @app.post("/api/generate")
@@ -137,7 +140,7 @@ def generate_site(req: GenerateRequest):
     
     try:
         result = generator.generate(req.prompt.strip())
-        files = result.get("files", {})
+        files = harden_files(result.get("files", {}))
         title = result.get("title", "Generated App")
         description = result.get("description", "Created with SiteForge Universal")
         
@@ -173,7 +176,7 @@ def refine_site(req: RefineRequest):
         
     try:
         result = generator.refine(project["files"], req.prompt.strip())
-        files = result.get("files", project["files"])
+        files = harden_files(result.get("files", project["files"]))
         title = result.get("title", project["title"])
         
         rev_num = add_revision(
