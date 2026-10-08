@@ -143,7 +143,7 @@ def generate_site(req: GenerateRequest):
             "model": result.get("model", generator.default_model)
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
 
 @app.post("/api/refine")
 def refine_site(req: RefineRequest):
