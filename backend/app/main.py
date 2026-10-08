@@ -172,6 +172,33 @@ def refine_site(req: RefineRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+import zipfile
+import io
+
+@app.get("/api/download/{project_id}")
+def download_project_zip(project_id: int):
+    project = get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    files = project.get("files", {})
+    if not files:
+        raise HTTPException(status_code=404, detail="No files found for project")
+        
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+        for filename, content in files.items():
+            zip_file.writestr(filename, content)
+            
+    zip_buffer.seek(0)
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/x-zip-compressed",
+        headers={
+            "Content-Disposition": f'attachment; filename="siteforge_project_{project_id}.zip"'
+        }
+    )
+
 # Mount compiled frontend if available
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 if FRONTEND_DIST.exists():

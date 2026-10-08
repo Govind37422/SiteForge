@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Monitor, Laptop, Tablet, Smartphone, RotateCcw, RotateCw, ExternalLink, Check, Copy, ZoomIn, ZoomOut } from 'lucide-react';
+import { Monitor, Laptop, Tablet, Smartphone, RotateCcw, RotateCw, ExternalLink, Check, Copy, ZoomIn, ZoomOut, Download } from 'lucide-react';
 
 export default function PreviewViewport({ project, onOpenInNewTab }) {
   const [device, setDevice] = useState('desktop'); // desktop | laptop | tablet | mobile
@@ -22,6 +22,10 @@ export default function PreviewViewport({ project, onOpenInNewTab }) {
     navigator.clipboard.writeText(htmlContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadZip = () => {
+    window.open(`http://127.0.0.1:8000/api/download/${project.id}`, '_blank');
   };
 
   const deviceConfigs = {
@@ -107,6 +111,13 @@ export default function PreviewViewport({ project, onOpenInNewTab }) {
 
         {/* Project Name & Actions */}
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleDownloadZip}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-xs font-semibold text-indigo-400 transition"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export ZIP</span>
+          </button>
           <button
             onClick={handleCopy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-slate-200 transition"
