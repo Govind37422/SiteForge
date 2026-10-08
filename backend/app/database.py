@@ -1,161 +1,147 @@
-import sqlite3
+import os
 import json
+import threading
+from pathlib import Path
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from app.config import DB_PATH
 
-def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Path to the persistent storage file
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_FILE = DATA_DIR / "projects.json"
+
+_lock = threading.Lock()
+
+def _load_data() -> Dict[str, Any]:
+    if not DATA_FILE.exists():
+        return {"next_id": 1, "projects": []}
+    try:
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {"next_id": 1, "projects": []}
+
+def _save_data(data: Dict[str, Any]):
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    temp_file = DATA_DIR / "projects.json.tmp"
+    with open(temp_file, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    # Atomic replace to prevent corruption
+    if os.name == 'nt' and DATA_FILE.exists():
+        os.remove(DATA_FILE)
+    os.rename(temp_file, DATA_FILE)
 
 def init_db():
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    # Create tables if not exist
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        prompt TEXT NOT NULL,
-        description TEXT,
-        files TEXT,
-        html TEXT,
-        css TEXT,
-        js TEXT,
-        full_code TEXT,
-        provider TEXT,
-        model TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );
-    """)
-    
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS revisions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        project_id INTEGER NOT NULL,
-        prompt TEXT NOT NULL,
-        files TEXT,
-        html TEXT,
-        revision_number INTEGER NOT NULL,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
-    );
-    """)
-    
-    # Auto-add missing columns for backward compatibility
-    existing_cols = [row[1] for row in cursor.execute("PRAGMA table_info(projects)").fetchall()]
-    for col, col_type in [("files", "TEXT"), ("html", "TEXT"), ("css", "TEXT"), ("js", "TEXT"), ("full_code", "TEXT"), ("description", "TEXT"), ("provider", "TEXT"), ("model", "TEXT")]:
-        if col not in existing_cols:
-            cursor.execute(f"ALTER TABLE projects ADD COLUMN {col} {col_type}")
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with _lock:
+        if not DATA_FILE.exists():
+            _save_data({"next_id": 1, "projects": []})
 
-    existing_rev_cols = [row[1] for row in cursor.execute("PRAGMA table_info(revisions)").fetchall()]
-    for col, col_type in [("files", "TEXT"), ("html", "TEXT")]:
-        if col not in existing_rev_cols:
-            cursor.execute(f"ALTER TABLE revisions ADD COLUMN {col} {col_type}")
+def save_project(title: str, prompt: str, description: str, files: Any, provider: str, model: str) -> int:
+    with _lock:
+        data = _load_data()
+        project_id = data.get("next_id", 1)
+        data["next_id"] = project_id + 1
 
-    conn.commit()
-    conn.close()
+        if isinstance(files, dict):
+            files_dict = files
+        elif isinstance(files, str):
+            files_dict = {"index.html": files}
+        else:
+            files_dict = {"index.html": "<h1>Generated Site</h1>"}
 
-def save_project(title: str, prompt: str, description: str, files: dict, provider: str, model: str) -> int:
-    files_json = json.dumps(files)
-    html_content = files.get("index.html", files.get(list(files.keys())[0], "")) if files else ""
-    now = datetime.utcnow().isoformat()
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-    INSERT INTO projects (title, prompt, description, files, html, full_code, provider, model, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (title, prompt, description, files_json, html_content, html_content, provider, model, now, now))
-    project_id = cursor.lastrowid
-    
-    cursor.execute("""
-    INSERT INTO revisions (project_id, prompt, files, html, revision_number, created_at)
-    VALUES (?, ?, ?, ?, 1, ?)
-    """, (project_id, prompt, files_json, html_content, now))
-    
-    conn.commit()
-    conn.close()
-    return project_id
+        now = datetime.utcnow().isoformat()
+        new_project = {
+            "id": project_id,
+            "title": title or "Generated Site",
+            "prompt": prompt,
+            "description": description or "",
+            "files": files_dict,
+            "html": files_dict.get("index.html", ""),
+            "full_code": files_dict.get("index.html", ""),
+            "provider": provider,
+            "model": model,
+            "created_at": now,
+            "updated_at": now,
+            "revisions": [
+                {
+                    "id": 1,
+                    "prompt": prompt,
+                    "files": files_dict,
+                    "revision_number": 1,
+                    "created_at": now
+                }
+            ]
+        }
 
-def add_revision(project_id: int, prompt: str, files: dict) -> int:
-    files_json = json.dumps(files)
-    html_content = files.get("index.html", files.get(list(files.keys())[0], "")) if files else ""
-    now = datetime.utcnow().isoformat()
-    conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT MAX(revision_number) FROM revisions WHERE project_id = ?", (project_id,))
-    row = cursor.fetchone()
-    next_rev = (row[0] or 0) + 1
-    
-    cursor.execute("""
-    INSERT INTO revisions (project_id, prompt, files, html, revision_number, created_at)
-    VALUES (?, ?, ?, ?, ?, ?)
-    """, (project_id, prompt, files_json, html_content, next_rev, now))
-    
-    cursor.execute("""
-    UPDATE projects 
-    SET files = ?, html = ?, full_code = ?, updated_at = ?
-    WHERE id = ?
-    """, (files_json, html_content, html_content, now, project_id))
-    
-    conn.commit()
-    conn.close()
-    return next_rev
+        data["projects"].insert(0, new_project)
+        _save_data(data)
+        return project_id
+
+def add_revision(project_id: int, prompt: str, files: Any) -> int:
+    with _lock:
+        data = _load_data()
+        now = datetime.utcnow().isoformat()
+        
+        if isinstance(files, dict):
+            files_dict = files
+        elif isinstance(files, str):
+            files_dict = {"index.html": files}
+        else:
+            files_dict = {"index.html": "<h1>Updated Site</h1>"}
+
+        for proj in data.get("projects", []):
+            if proj["id"] == project_id:
+                revisions = proj.get("revisions", [])
+                next_rev = len(revisions) + 1
+                revisions.append({
+                    "id": next_rev,
+                    "prompt": prompt,
+                    "files": files_dict,
+                    "revision_number": next_rev,
+                    "created_at": now
+                })
+                proj["files"] = files_dict
+                proj["html"] = files_dict.get("index.html", "")
+                proj["full_code"] = files_dict.get("index.html", "")
+                proj["updated_at"] = now
+                proj["revisions"] = revisions
+                _save_data(data)
+                return next_rev
+        return 1
 
 def get_all_projects() -> List[Dict[str, Any]]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    SELECT id, title, prompt, description, provider, model, created_at, updated_at
-    FROM projects ORDER BY id DESC
-    """)
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    with _lock:
+        data = _load_data()
+        result = []
+        for p in data.get("projects", []):
+            result.append({
+                "id": p["id"],
+                "title": p.get("title", "Project"),
+                "prompt": p.get("prompt", ""),
+                "description": p.get("description", ""),
+                "provider": p.get("provider", ""),
+                "model": p.get("model", ""),
+                "created_at": p.get("created_at", ""),
+                "updated_at": p.get("updated_at", "")
+            })
+        return result
 
 def get_project_by_id(project_id: int) -> Optional[Dict[str, Any]]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
-    row = cursor.fetchone()
-    if not row:
-        conn.close()
+    with _lock:
+        data = _load_data()
+        for p in data.get("projects", []):
+            if p["id"] == project_id:
+                if "files" not in p or not p["files"]:
+                    p["files"] = {"index.html": p.get("full_code", "<h1>No code</h1>")}
+                return p
         return None
-    project = dict(row)
-    
-    try:
-        if project.get("files"):
-            project["files"] = json.loads(project["files"])
-        else:
-            html_val = project.get("html") or project.get("full_code") or "<h1>No code found</h1>"
-            project["files"] = {"index.html": html_val}
-    except Exception:
-        html_val = project.get("html") or project.get("full_code") or "<h1>No code found</h1>"
-        project["files"] = {"index.html": html_val}
-        
-    if "index.html" not in project["files"] and (project.get("html") or project.get("full_code")):
-        project["files"]["index.html"] = project.get("html") or project.get("full_code")
-
-    cursor.execute("""
-    SELECT id, prompt, revision_number, created_at 
-    FROM revisions WHERE project_id = ? ORDER BY revision_number ASC
-    """, (project_id,))
-    revisions = [dict(r) for r in cursor.fetchall()]
-    project["revisions"] = revisions
-    conn.close()
-    return project
 
 def delete_project(project_id: int) -> bool:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM revisions WHERE project_id = ?", (project_id,))
-    cursor.execute("DELETE FROM projects WHERE id = ?", (project_id,))
-    deleted = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return deleted
+    with _lock:
+        data = _load_data()
+        initial_len = len(data.get("projects", []))
+        data["projects"] = [p for p in data.get("projects", []) if p["id"] != project_id]
+        if len(data["projects"]) < initial_len:
+            _save_data(data)
+            return True
+        return False

@@ -28,4 +28,4 @@ PROVIDER_CONFIGS = {
     }
 }
 
-DB_PATH = Path(__file__).resolve().parent.parent / "siteforge.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "siteforge_v2.db"
