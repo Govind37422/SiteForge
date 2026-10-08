@@ -258,9 +258,12 @@ class SiteForgeGenerator:
         self.base_url = self.config.get("base_url")
         self.default_model = self.config.get("default_model")
         
+        import httpx
+        custom_client = httpx.Client()
         self.client = OpenAI(
             api_key=self.api_key or "dummy_key",
-            base_url=self.base_url
+            base_url=self.base_url,
+            http_client=custom_client
         )
 
     def _clean_json_response(self, text: str) -> dict:

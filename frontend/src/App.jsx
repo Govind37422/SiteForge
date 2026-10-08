@@ -6,6 +6,7 @@ import CodeViewer from './components/CodeViewer';
 import RefineSidebar from './components/RefineSidebar';
 import HistoryDrawer from './components/HistoryDrawer';
 import GeneratingOverlay from './components/GeneratingOverlay';
+import AnalyticsPanel from './components/AnalyticsPanel';
 import { Sparkles, MessageSquare, Send, Cpu, Layers, Palette, Terminal } from 'lucide-react';
 
 export default function App() {
@@ -238,6 +239,8 @@ export default function App() {
         )}
       </main>
 
+      <AnalyticsPanel />
+      
       <HistoryDrawer
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
