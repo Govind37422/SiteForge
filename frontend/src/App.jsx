@@ -6,6 +6,7 @@ import CodeViewer from './components/CodeViewer';
 import RefineSidebar from './components/RefineSidebar';
 import HistoryDrawer from './components/HistoryDrawer';
 import GeneratingOverlay from './components/GeneratingOverlay';
+import { Sparkles, MessageSquare, Send, Cpu, Layers, Palette, Terminal } from 'lucide-react';
 
 export default function App() {
   const [currentProject, setCurrentProject] = useState(null);
@@ -22,7 +23,6 @@ export default function App() {
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [errorMessage, setErrorMessage] = useState(null);
 
-  // Load initial templates & history
   useEffect(() => {
     fetchHealth();
     fetchTemplates();
@@ -85,7 +85,7 @@ export default function App() {
       const newProj = await res.json();
       setCurrentProject(newProj);
       setActiveTab('preview');
-      fetchProjects(); // update history list
+      fetchProjects();
     } catch (err) {
       setErrorMessage(err.message);
     } finally {
@@ -117,7 +117,7 @@ export default function App() {
       setCurrentProject((prev) => ({
         ...prev,
         title: updated.title,
-        full_code: updated.full_code,
+        files: updated.files,
         revisions: [
           ...(prev.revisions || []),
           {
@@ -163,12 +163,13 @@ export default function App() {
   };
 
   const handleExport = () => {
-    if (!currentProject) return;
-    const blob = new Blob([currentProject.full_code], { type: 'text/html;charset=utf-8' });
+    if (!currentProject || !currentProject.files) return;
+    const htmlContent = currentProject.files["index.html"] || "";
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${(currentProject.title || 'siteforge-site').toLowerCase().replace(/\s+/g, '-')}.html`;
+    link.download = `${(currentProject.title || 'siteforge-app').toLowerCase().replace(/\s+/g, '-')}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -181,8 +182,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex flex-col font-sans">
-      {/* Top Navbar */}
+    <div className="min-h-screen bg-[#07080d] text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+      {/* Navbar */}
       <Navbar
         currentProject={currentProject}
         onNewSite={handleNewSite}
@@ -194,20 +195,15 @@ export default function App() {
         providerInfo={providerInfo}
       />
 
-      {/* Global Error Toast */}
+      {/* Error Toast */}
       {errorMessage && (
         <div className="fixed top-20 right-6 z-50 bg-red-500/10 border border-red-500/30 text-red-200 px-4 py-3 rounded-xl backdrop-blur-md shadow-2xl flex items-center justify-between gap-4 max-w-md animate-fade-in">
           <span className="text-xs">{errorMessage}</span>
-          <button 
-            onClick={() => setErrorMessage(null)} 
-            className="text-red-400 hover:text-white text-xs font-bold"
-          >
-            ✕
-          </button>
+          <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-white text-xs font-bold">✕</button>
         </div>
       )}
 
-      {/* Main Workspace */}
+      {/* Workspace */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {!currentProject ? (
           <PromptConsole
@@ -217,7 +213,6 @@ export default function App() {
           />
         ) : (
           <div className="flex-1 flex overflow-hidden">
-            {/* Left/Center Editor or Preview */}
             <div className="flex-1 flex flex-col overflow-hidden">
               {activeTab === 'preview' ? (
                 <PreviewViewport
@@ -232,7 +227,6 @@ export default function App() {
               )}
             </div>
 
-            {/* Right AI Refine Sidebar */}
             <RefineSidebar
               project={currentProject}
               onRefine={handleRefine}
@@ -244,7 +238,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Slide-out History Drawer */}
       <HistoryDrawer
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
@@ -253,7 +246,6 @@ export default function App() {
         onDeleteProject={handleDeleteProject}
       />
 
-      {/* Multi-step Thinking / Generating Overlay */}
       <GeneratingOverlay
         isGenerating={isGenerating}
         prompt={currentPrompt}
