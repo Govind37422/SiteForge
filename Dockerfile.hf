@@ -1,0 +1,39 @@
+# SiteForge on Hugging Face Spaces — Docker SDK
+# Stage 1: Build React Frontend
+FROM node:18-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend .
+RUN npm run build
+
+# Stage 2: Python Backend + served frontend
+FROM python:3.11-slim
+WORKDIR /app/backend
+
+# Permissions required by HF Spaces (run as user 1000)
+RUN useradd -m -u 1000 user
+
+# Python dependencies
+COPY backend/requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir "uvicorn[standard]" gunicorn
+
+# Backend source
+COPY backend ./backend_src
+RUN cp -r backend_src/* ./ && rm -rf backend_src
+
+# Compiled frontend from Stage 1
+COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
+
+# Writable data dir (HF Spaces filesystem is read-only except /data)
+RUN mkdir -p /data/siteforge && chown -R user:user /data /app
+ENV SITEFORGE_DATA_DIR=/data/siteforge
+
+USER user
+ENV NODE_ENV=production
+ENV PYTHONUNBUFFERED=1
+ENV PORT=7860
+
+EXPOSE 7860
+CMD ["gunicorn", "app.main:app", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:7860", "--timeout", "120"]

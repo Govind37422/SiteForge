@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: siteforge
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PROVIDER
+        value: openrouter
+      - key: OPENAI_API_KEY
+        sync: false   # paste your OpenRouter key in Render dashboard
+      - key: SITEFORGE_DATA_DIR
+        value: /data/siteforge

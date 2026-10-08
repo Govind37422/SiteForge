@@ -29,5 +29,5 @@ EXPOSE 8000
 ENV NODE_ENV=production
 ENV PYTHONUNBUFFERED=1
 
-# Start Gunicorn server with Uvicorn workers
-CMD ["gunicorn", "app.main:app", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"]
+# Start Gunicorn: uses $PORT (injected by Render), falls back to 8000 locally
+CMD gunicorn app.main:app --workers 2 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000} --timeout 120

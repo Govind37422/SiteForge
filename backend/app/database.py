@@ -5,8 +5,10 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
+from app.config import DATA_DIR_OVERRIDE
+
 # Path to the persistent storage file
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(DATA_DIR_OVERRIDE) if DATA_DIR_OVERRIDE else Path(__file__).resolve().parent.parent / "data"
 DATA_FILE = DATA_DIR / "projects.json"
 
 _lock = threading.Lock()
