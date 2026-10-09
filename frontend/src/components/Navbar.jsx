@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, History, Code2, Download, ExternalLink, Plus, Layers, Flame } from 'lucide-react';
+import { Sparkles, History, Code2, Download, ExternalLink, Plus, Layers, Flame, Share2 } from 'lucide-react';
 
 export default function Navbar({ 
   currentProject, 
@@ -9,6 +9,7 @@ export default function Navbar({
   activeTab, 
   setActiveTab,
   onExport,
+  onShare,
   providerInfo
 }) {
   return (
@@ -89,6 +90,14 @@ export default function Navbar({
 
         {currentProject && (
           <>
+            <button
+              onClick={onShare}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500/20 to-purple-600/20 hover:from-indigo-500/30 hover:to-purple-600/30 border border-indigo-500/40 text-xs text-indigo-200 hover:text-white transition font-semibold"
+              title="Share public link & QR"
+            >
+              <Share2 className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Share</span>
+            </button>
             <button
               onClick={onExport}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-slate-200 transition"

@@ -7,6 +7,7 @@ import RefineSidebar from './components/RefineSidebar';
 import HistoryDrawer from './components/HistoryDrawer';
 import GeneratingOverlay from './components/GeneratingOverlay';
 import AnalyticsPanel from './components/AnalyticsPanel';
+import ShareModal from './components/ShareModal';
 import { Sparkles, MessageSquare, Send, Cpu, Layers, Palette, Terminal } from 'lucide-react';
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
   const [isRefineSidebarOpen, setIsRefineSidebarOpen] = useState(true);
   const [currentPrompt, setCurrentPrompt] = useState('');
   const [errorMessage, setErrorMessage] = useState(null);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   useEffect(() => {
     fetchHealth();
@@ -193,6 +195,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onExport={handleExport}
+        onShare={() => setIsShareOpen(true)}
         providerInfo={providerInfo}
       />
 
@@ -253,6 +256,13 @@ export default function App() {
         isGenerating={isGenerating}
         prompt={currentPrompt}
       />
+
+      {isShareOpen && (
+        <ShareModal
+          project={currentProject}
+          onClose={() => setIsShareOpen(false)}
+        />
+      )}
     </div>
   );
 }
